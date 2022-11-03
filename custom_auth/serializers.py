@@ -1,9 +1,6 @@
 import random
 
 from django.contrib.auth import authenticate
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework.validators import UniqueValidator
@@ -17,41 +14,6 @@ class LoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAccount
         fields = ("email", "password")
-
-
-class ResetPasswordEmailSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-
-    class Meta:
-        fields = ["email"]
-
-
-class NewPasswordSerializer(serializers.Serializer):
-    password = serializers.CharField(min_length=6)
-    token = serializers.CharField(min_length=1)
-    uidb64 = serializers.CharField(min_length=1)
-
-    class Meta:
-        fields = ["password", "token", "uidb64"]
-
-    def validate(self, data):
-        try:
-            password = data.get("password")
-            token = data.get("token")
-            uidb64 = data.get("uidb64")
-            id = force_str(urlsafe_base64_decode(uidb64))
-            user = UserAccount.objects.get(id=id)
-
-            if PasswordResetTokenGenerator().check_token(user, token):
-                user.set_password(password)
-                user.save()
-            else:
-                raise AuthenticationFailed("The reset link is invalid", 401)
-
-        except Exception:
-            raise AuthenticationFailed("The reset link is invalid", 401)
-
-        return super().validate(data)
 
 
 def check(data):
@@ -77,7 +39,8 @@ def checkCode(value):
 
 
 class RegisterSerializer(serializers.Serializer):
-    # TODO: Implement register functionality
+
+
     email = serializers.EmailField(
         required=True,
         validators=[

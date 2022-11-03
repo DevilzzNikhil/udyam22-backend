@@ -1,8 +1,6 @@
 from rest_framework import generics, permissions, serializers, status
 from rest_framework.response import Response
 from .serializers import (
-    ResetPasswordEmailSerializer,
-    NewPasswordSerializer,
     RegisterSerializer,
     check,
     LoginSerializer,
@@ -67,99 +65,65 @@ class LoginView(generics.GenericAPIView):
         return Response({"token": token.key})
 
 
+class FormData(generics.GenericAPIView):
+
+    def post(self, request):
+        email = request.data.get("email")
+        user = UserAccount.objects.filter(email = email) ;
+
+        if not user :
+            return Response(
+                {"error": "Please check your credentials...cannot login!"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        
+        was_active = user.is_active 
+        if was_active :
+            return Response(
+                {"message": "User already registered"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        college_name = request.data.get("college_name")
+        referral_code = request.data.get("refferal_code")
+        year = request.data.get("year")
+
+
+        user.college_name = college_name 
+        user.year = year
+
+        if referral_code and was_active is False:
+            ref_user = UserAccount.objects.get(user_referral_code=user.referral_code)
+            if  not ref_user:
+                return Response(
+                {"error": "unknown referral code"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+            else :
+                ref_user.referral_count += 1
+                ref_user.save()
+        
+        user.is_active = True
+        user.save() 
+        login(request, user)
+
+        return Response(
+            {"message" : "Your Account Has Been Succesfully Created"},
+            status=status.HTTP_201_CREATED
+        )
+
+
+
 class LogoutView(generics.GenericAPIView):
-    """
-    TODO:
-    Implement logout functionality, logout the user.
-    """
 
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = LoginSerializer
 
     def get(self, request):
-        request.user.auth_token.delete()
         logout(request)
 
         return Response(status=status.HTTP_200_OK)
 
-
-def create_auth_token(user):
-    """
-    Returns the token required for authentication for a user.
-    """
-    token, _ = Token.objects.get_or_create(user=user)
-    return token
-
-
-class RequestPasswordResetEmail(generics.GenericAPIView):
-    serializer_class = ResetPasswordEmailSerializer
-
-    def post(self, request):
-
-        email = request.data["email"]
-
-        if len(UserAccount.objects.filter(email=email)) != 0:
-            user = UserAccount.objects.get(email=email)
-            if not user.is_active:
-                return Response(
-                    {"error": "User not authorized!"},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
-            uidb64 = urlsafe_base64_encode(smart_bytes(user.id))
-            token = PasswordResetTokenGenerator().make_token(user)
-            current_site = get_current_site(request=request).domain
-            relativeLink = reverse(
-                "password-reset-confirm", kwargs={"uidb64": uidb64, "token": token}
-            )
-            absurl = "http://" + current_site + relativeLink
-            email_body = (
-                part1
-                + user.name
-                + part2
-                + """We have received a request to reset the password of your Udyam account.\n
-                Click the link below to proceed further:"""
-                + part3
-                + absurl
-                + part4
-                + "Reset"
-                + part5
-            )
-            data = {
-                "email_body": email_body,
-                "to_mail": [user.email],
-                "email_subject": "Reset Your Udyam Password",
-            }
-            Util.send_email(data)
-            return Response(
-                {"success": "Link has been sent by email to reset password"},
-                status=status.HTTP_200_OK,
-            )
-        else:
-            return Response(
-                {"message": "No user with this email id exists"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-
-def PasswordTokenCheck(request, uidb64, token):
-    id = smart_str(urlsafe_base64_decode(uidb64))
-    user = UserAccount.objects.get(id=id)
-    if not PasswordResetTokenGenerator().check_token(user, token):
-        raise Http404
-    url = BASE_URL_FRONTEND + "/resetpage?id=" + str(uidb64) + "&token=" + str(token)
-    return redirect(url)
-
-
-class NewPasswordView(generics.GenericAPIView):
-    serializer_class = NewPasswordSerializer
-
-    def patch(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return Response(
-            {"success": True, "message": "Password reset successful"},
-            status=status.HTTP_200_OK,
-        )
 
 
 class UserUpdateView(generics.GenericAPIView):
@@ -259,18 +223,18 @@ class RegisterView(generics.GenericAPIView):
             return Response(error, status=status.HTTP_409_CONFLICT)
 
 
-def ActivateAccount(request, uidb64, token):
-    id = smart_str(urlsafe_base64_decode(uidb64))
-    user = UserAccount.objects.get(id=id)
-    if not PasswordResetTokenGenerator().check_token(user, token):
-        raise Http404
-    url = BASE_URL_FRONTEND + "/loginregister"
-    was_active = user.is_active
-    user.is_active = True
-    user.save()
-    if user.referral_code and was_active is False:
-        user = UserAccount.objects.get(user_referral_code=user.referral_code)
-        if user is not None:
-            user.referral_count += 1
-            user.save()
-    return redirect(url)
+# def ActivateAccount(request, uidb64, token):
+#     id = smart_str(urlsafe_base64_decode(uidb64))
+#     user = UserAccount.objects.get(id=id)
+#     if not PasswordResetTokenGenerator().check_token(user, token):
+#         raise Http404
+#     url = BASE_URL_FRONTEND + "/loginregister"
+#     was_active = user.is_active
+#     user.is_active = True
+#     user.save()
+#     if user.referral_code and was_active is False:
+#         user = UserAccount.objects.get(user_referral_code=user.referral_code)
+#         if user is not None:
+#             user.referral_count += 1
+#             user.save()
+#     return redirect(url)
