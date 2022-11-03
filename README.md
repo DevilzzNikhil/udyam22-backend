@@ -29,3 +29,4 @@ For Uptading work after some PRs are merged :
 General Rules : 
 1. For APIs, test it with all possible test case, so it will not cause any future problems.
 2. Always inform Yash bhaiya after adding a pull request and get it reviewed by him.
+3 - Nikhil Samar Aechit
