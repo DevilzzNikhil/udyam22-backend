@@ -5,7 +5,8 @@ from .views import (
     # NewPasswordView,
     RegisterView,
 )
-from .views import ActivateAccount, LoginView, LogoutView, UserUpdateView
+from .views import  LoginView, LogoutView, UserUpdateView
+from .api import UserInitApi
 
 """
 TODO:
@@ -18,24 +19,6 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("register/", RegisterView.as_view(), name="register"),
     path("update/", UserUpdateView.as_view(), name="update"),
-    # path(
-    #     "activate/<uidb64>/<token>/",
-    #     ActivateAccount,
-    #     name="activate-account",
-    # ),
-    # path(
-    #     "password_reset/email/",
-    #     RequestPasswordResetEmail.as_view(),
-    #     name="password-reset-email",
-    # ),
-    # path(
-    #     "password_reset/<uidb64>/<token>/",
-    #     PasswordTokenCheck,
-    #     name="password-reset-confirm",
-    # ),
-    # path(
-    #     "password_reset/update_password/",
-    #     NewPasswordView.as_view(),
-    #     name="password-reset-complete",
-    # ),
+    path('google-login/', UserInitApi.as_view(), name='google-login' )
+
 ]
